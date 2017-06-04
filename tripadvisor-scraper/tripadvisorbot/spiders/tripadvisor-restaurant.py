@@ -16,14 +16,13 @@ MAX_REVIEWS_PAGES = 500
 
 
 class TripAdvisorRestaurantBaseSpider(BaseSpider):
-	name = "tripadvisor-restaurant"
+	name = "tripadvisorbot"
 
-	allowed_domains = ["tripadvisor.com"]
-	base_uri = "http://www.tripadvisor.com"
+	allowed_domains = ["tripadvisor.co"]
+	base_uri = "http://www.tripadvisor.co"
 	start_urls = [
-		base_uri + "/RestaurantSearch?geo=60763&q=New+York+City%2C+New+York&cat=&pid="
+		base_uri + "/Restaurants-g294074-Bogota.html"
 	]
-
 
 	# Entry point for BaseSpider.
 	# Page type: /RestaurantSearch
@@ -32,7 +31,7 @@ class TripAdvisorRestaurantBaseSpider(BaseSpider):
 
 		sel = Selector(response)
 		snode_restaurants = sel.xpath('//div[@id="EATERY_SEARCH_RESULTS"]/div[starts-with(@class, "listing")]')
-		
+
 		# Build item index.
 		for snode_restaurant in snode_restaurants:
 
@@ -40,7 +39,7 @@ class TripAdvisorRestaurantBaseSpider(BaseSpider):
 
 			tripadvisor_item['url'] = self.base_uri + clean_parsed_string(get_parsed_string(snode_restaurant, 'div[@class="quality easyClear"]/span/a[@class="property_title "]/@href'))
 			tripadvisor_item['name'] = clean_parsed_string(get_parsed_string(snode_restaurant, 'div[@class="quality easyClear"]/span/a[@class="property_title "]/text()'))
-			
+
 			# Cleaning string and taking only the first part before whitespace.
 			snode_restaurant_item_avg_stars = clean_parsed_string(get_parsed_string(snode_restaurant, 'div[@class="wrap"]/div[@class="entry wrap"]/div[@class="description"]/div[@class="wrap"]/div[@class="rs rating"]/span[starts-with(@class, "rate")]/img[@class="sprite-ratings"]/@alt'))
 			tripadvisor_item['avg_stars'] = re.match(r'(\S+)', snode_restaurant_item_avg_stars).group()
@@ -49,7 +48,7 @@ class TripAdvisorRestaurantBaseSpider(BaseSpider):
 			yield Request(url=tripadvisor_item['url'], meta={'tripadvisor_item': tripadvisor_item}, callback=self.parse_search_page)
 
 			tripadvisor_items.append(tripadvisor_item)
-		
+
 
 	# Popolate reviews and address in item index for a single item.
 	# Page type: /Restaurant_Review
@@ -73,7 +72,7 @@ class TripAdvisorRestaurantBaseSpider(BaseSpider):
 			tripadvisor_address_item['locality'] = snode_address_locality
 
 		tripadvisor_address_item['country'] = clean_parsed_string(get_parsed_string(snode_address, 'address/span/span[@class="format_address"]/span[@class="locality"]/span[@property="v:region"]/text()'))
-		
+
 		tripadvisor_item['address'] = tripadvisor_address_item
 
 
@@ -114,7 +113,7 @@ class TripAdvisorRestaurantBaseSpider(BaseSpider):
 			# Reviews for item.
 			for snode_review in snode_reviews:
 				tripadvisor_review_item = TripAdvisorReviewItem()
-				
+
 				tripadvisor_review_item['title'] = clean_parsed_string(get_parsed_string(snode_review, 'div[@class="quote"]/text()'))
 
 				# Review item description is a list of strings.
@@ -123,7 +122,7 @@ class TripAdvisorRestaurantBaseSpider(BaseSpider):
 				# Cleaning string and taking only the first part before whitespace.
 				snode_review_item_stars = clean_parsed_string(get_parsed_string(snode_review, 'div[@class="rating reviewItemInline"]/span[starts-with(@class, "rate")]/img/@alt'))
 				tripadvisor_review_item['stars'] = re.match(r'(\S+)', snode_review_item_stars).group()
-				
+
 				snode_review_item_date = clean_parsed_string(get_parsed_string(snode_review, 'div[@class="rating reviewItemInline"]/span[@class="ratingDate"]/text()'))
 				snode_review_item_date = re.sub(r'Reviewed ', '', snode_review_item_date, flags=re.IGNORECASE)
 				snode_review_item_date = time.strptime(snode_review_item_date, '%B %d, %Y') if snode_review_item_date else None
